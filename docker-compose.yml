@@ -2,11 +2,30 @@ version: '3'
 services:
   bourne:
     build: .
+    environment:
+      SCYLLA_HOST: scylla
+      KAFKA_BROKERS: kafka:9092
     ports:
       - "8000:8000"
-    environment:
-      - SCYLLA_HOST=scylla
+    depends_on:
+      - scylla
+      - kafka
+
   scylla:
     image: scylladb/scylla:5.2.0
     ports:
       - "9042:9042"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    environment:
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    depends_on:
+      - zookeeper
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181

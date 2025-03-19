@@ -1,0 +1,84 @@
+name: Bourne CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      scylla:
+        image: scylladb/scylla:5.2.0
+        ports:
+          - "9042:9042"
+        options: --health-cmd "cqlsh -e 'DESCRIBE SCHEMA'" --health-interval 5s --health-timeout 30s
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install PDM
+      run: pip install pdm
+
+    - name: Cache PDM dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          .venv
+          __pypackages__
+        key: pdm-${{ hashFiles('pdm.lock') }}
+
+    - name: Install dependencies
+      run: |
+        pdm install -G dev
+        pdm run pip install --upgrade pip
+
+    - name: Run tests
+      env:
+        SCYLLA_HOST: localhost
+        KAFKA_BROKERS: "localhost:9092"  # Adicione se tiver testes Kafka
+      run: pdm run pytest -v tests/
+
+    - name: Code formatting (black)
+      run: pdm run black --check src tests
+
+    - name: Type checking (mypy)
+      run: pdm run mypy src
+
+    - name: Linting (ruff)
+      run: pdm run ruff check src tests
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Login to AWS ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: |
+            your-ecr-repo/bourne:latest
+            your-ecr-repo/bourne:${{ github.sha }}
+
+      - name: Security scan (trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          ignore-unfixed: true
+          exit-code: '1'
+          format: 'table'
+          severity: 'CRITICAL'
