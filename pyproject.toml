@@ -1,0 +1,31 @@
+[project]
+name = "bourne"
+version = "0.1.0"
+description = "Default template for PDM package"
+authors = [
+    {name = "Rodrigo Tavares Miron", email = "rodrigo.miron47@gmail.com"},
+]
+dependencies = ["fastapi>=0.115.11", "uvicorn[standard]>=0.34.0", "scylla-driver>=3.29.3", "confluent-kafka>=2.8.2", "pydantic>=2.10.6", "python-dotenv>=1.0.1"]
+requires-python = "==3.13.*"
+readme = "README.md"
+license = {text = "MIT"}
+
+
+[project.optional-dependencies]
+scylla = [
+    "scylla-driver>=3.28",
+    "cassandra-migrate>=0.3.2",
+]
+kafka = [
+    "confluent-kafka>=2.8.2",
+    "faust-streaming>=0.11.3",
+]
+[tool.pdm]
+distribution = false
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+    "mypy>=1.15.0",
+    "httpx>=0.28.1",
+]
