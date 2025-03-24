@@ -11,97 +11,56 @@ jobs:
     runs-on: ubuntu-latest
     services:
       scylla:
-        image: scylladb/scylla:5.4.0
+        image: scylladb/scylla:5.4.9
         ports:
           - "9042:9042"
         options: >-
-          --health-cmd "cqlsh -u bourne_user -p bourne_password -e 'DESCRIBE KEYSPACES'"
-          --health-interval 5s
-          --health-timeout 2s
+          --health-cmd "cqlsh -e 'DESCRIBE KEYSPACES'"
+          --health-interval 10s
+          --health-timeout 20s
           --health-retries 10
-      kafka:
-        image: confluentinc/cp-kafka:7.6.0
-        ports:
-          - "9092:9092"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Cassandra tools (cqlsh)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip
+          pip3 install cqlsh
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install PDM
+        run: pip install pdm
+
+      - name: Cache PDM dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            .venv
+            __pypackages__
+          key: pdm-${{ hashFiles('pdm.lock') }}
+
+      - name: Install dependencies
+        run: |
+          pdm install -G dev
+          pdm run pip install --upgrade pip
+
+      - name: Run tests
         env:
-          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-          KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-        depends_on:
-          zookeeper:
-            condition: service_started
-      zookeeper:
-        image: confluentinc/cp-zookeeper:7.6.0
-        healthcheck:
-          test: [ "CMD", "zkServer.sh", "status" ]
-          interval: 10s
-          timeout: 5s
-          retries: 3
-        ports:
-          - "2181:2181"
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+          SCYLLA_HOST: localhost
+        run: pdm run pytest -v tests/
 
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.11"
+      - name: Code formatting (black)
+        run: pdm run black --check src tests
 
-    - name: Install PDM
-      run: pip install pdm
+      - name: Type checking (mypy)
+        run: pdm run mypy src
 
-    - name: Cache PDM dependencies
-      uses: actions/cache@v3
-      with:
-        path: |
-          .venv
-          __pypackages__
-        key: pdm-${{ hashFiles('pdm.lock') }}
-
-    - name: Install dependencies
-      run: |
-        pdm install -G dev
-        pdm run pip install --upgrade pip
-
-    - name: Run tests
-      env:
-        SCYLLA_HOST: localhost
-        KAFKA_BROKERS: "kafka:9092"
-      run: pdm run pytest -v tests/
-
-    - name: Code formatting (black)
-      run: pdm run black --check src tests
-
-    - name: Type checking (mypy)
-      run: pdm run mypy src
-
-    - name: Linting (ruff)
-      run: pdm run ruff check src tests
-
-  deploy:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-      - name: Login to AWS ECR
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: true
-          tags: |
-            your-ecr-repo/bourne:latest
-            your-ecr-repo/bourne:${{ github.sha }}
-
-      - name: Security scan (trivy)
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          ignore-unfixed: true
-          exit-code: '1'
-          format: 'table'
-          severity: 'CRITICAL'
+      - name: Linting (ruff)
+        run: pdm run ruff check src tests
