@@ -11,14 +11,23 @@ jobs:
     runs-on: ubuntu-latest
     services:
       scylla:
-        image: scylladb/scylla:5.4.0
+        image: scylladb/scylla:5.4.9
         ports:
           - "9042:9042"
         options: >-
           --health-cmd "cqlsh -e 'DESCRIBE KEYSPACES'"
-          --health-interval 5s
-          --health-timeout 10s
-          --health-retries 5
+          --health-interval 10s
+          --health-timeout 20s
+          --health-retries 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Cassandra tools (cqlsh)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip
+          pip3 install cqlsh
 
       zookeeper:
         image: confluentinc/cp-zookeeper:7.6.0
