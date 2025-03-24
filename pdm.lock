@@ -5,7 +5,7 @@
 groups = ["default", "dev", "kafka", "scylla"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:1d3462b3708076b3aab3e28ca7cdf9749283095d40563f311e1ccf8304cc5e69"
+content_hash = "sha256:84881eb2824a3296a4c5ca3e5c05d47ccdd8b13f12a2d9770ea3b4409e4af37d"
 
 [[metadata.targets]]
 requires_python = "==3.13.*"
@@ -753,16 +753,16 @@ files = [
 
 [[package]]
 name = "pytest-asyncio"
-version = "0.25.3"
-requires_python = ">=3.9"
+version = "0.23.6"
+requires_python = ">=3.8"
 summary = "Pytest support for asyncio"
 groups = ["dev"]
 dependencies = [
-    "pytest<9,>=8.2",
+    "pytest<9,>=7.0.0",
 ]
 files = [
-    {file = "pytest_asyncio-0.25.3-py3-none-any.whl", hash = "sha256:9e89518e0f9bd08928f97a3482fdc4e244df17529460bc038291ccaf8f85c7c3"},
-    {file = "pytest_asyncio-0.25.3.tar.gz", hash = "sha256:fc1da2cf9f125ada7e710b4ddad05518d4cee187ae9412e9ac9271003497f07a"},
+    {file = "pytest-asyncio-0.23.6.tar.gz", hash = "sha256:ffe523a89c1c222598c76856e76852b787504ddb72dd5d9b6617ffa8aa2cde5f"},
+    {file = "pytest_asyncio-0.23.6-py3-none-any.whl", hash = "sha256:68516fdd1018ac57b846c9846b954f0393b26f094764a28c955eabb0536a4e8a"},
 ]
 
 [[package]]
