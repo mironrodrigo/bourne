@@ -11,11 +11,34 @@ jobs:
     runs-on: ubuntu-latest
     services:
       scylla:
-        image: scylladb/scylla:5.2.0
+        image: scylladb/scylla:5.4.0
         ports:
           - "9042:9042"
-        options: --health-cmd "cqlsh -e 'DESCRIBE SCHEMA'" --health-interval 5s --health-timeout 30s
-
+        options: >-
+          --health-cmd "cqlsh -u bourne_user -p bourne_password -e 'DESCRIBE KEYSPACES'"
+          --health-interval 5s
+          --health-timeout 2s
+          --health-retries 10
+      kafka:
+        image: confluentinc/cp-kafka:7.6.0
+        ports:
+          - "9092:9092"
+        env:
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+          KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+        depends_on:
+          zookeeper:
+            condition: service_started
+      zookeeper:
+        image: confluentinc/cp-zookeeper:7.6.0
+        healthcheck:
+          test: [ "CMD", "zkServer.sh", "status" ]
+          interval: 10s
+          timeout: 5s
+          retries: 3
+        ports:
+          - "2181:2181"
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -44,7 +67,7 @@ jobs:
     - name: Run tests
       env:
         SCYLLA_HOST: localhost
-        KAFKA_BROKERS: "localhost:9092"  # Adicione se tiver testes Kafka
+        KAFKA_BROKERS: "kafka:9092"
       run: pdm run pytest -v tests/
 
     - name: Code formatting (black)
