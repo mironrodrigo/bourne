@@ -15,10 +15,21 @@ jobs:
         ports:
           - "9042:9042"
         options: >-
-          --health-cmd "cqlsh -u bourne_user -p bourne_password -e 'DESCRIBE KEYSPACES'"
+          --health-cmd "cqlsh -e 'DESCRIBE KEYSPACES'"
           --health-interval 5s
-          --health-timeout 2s
-          --health-retries 10
+          --health-timeout 10s
+          --health-retries 5
+
+      zookeeper:
+        image: confluentinc/cp-zookeeper:7.6.0
+        ports:
+          - "2181:2181"
+        options: >-
+          --health-cmd "zkServer.sh status"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 3
+
       kafka:
         image: confluentinc/cp-kafka:7.6.0
         ports:
@@ -27,18 +38,12 @@ jobs:
           KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
           KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
           KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-        depends_on:
-          zookeeper:
-            condition: service_started
-      zookeeper:
-        image: confluentinc/cp-zookeeper:7.6.0
-        healthcheck:
-          test: [ "CMD", "zkServer.sh", "status" ]
-          interval: 10s
-          timeout: 5s
-          retries: 3
-        ports:
-          - "2181:2181"
+        options: >-
+          --health-cmd "kafka-topics --bootstrap-server localhost:9092 --list"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -67,7 +72,7 @@ jobs:
     - name: Run tests
       env:
         SCYLLA_HOST: localhost
-        KAFKA_BROKERS: "kafka:9092"
+        KAFKA_BROKERS: "localhost:9092"
       run: pdm run pytest -v tests/
 
     - name: Code formatting (black)
