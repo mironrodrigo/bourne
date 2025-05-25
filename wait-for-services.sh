@@ -1,4 +1,3 @@
-# Adicione este arquivo ao repositório
 SCYLLA_HOST=scylla
 SCYLLA_PORT=9042
 KAFKA_BROKERS=kafka:9092

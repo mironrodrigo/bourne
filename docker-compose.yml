@@ -2,17 +2,22 @@ version: '3'
 services:
   bourne:
     build: .
-    command: ["./wait-for-services.sh", "pdm", "run", "uvicorn", "bourne.main:app", "--host", "0.0.0.0"]
+    depends_on:
+      scylla:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    command: >
+      bash -c "
+        ./wait-for-services.sh && 
+        python -m bourne.db.migrate && 
+        pdm run uvicorn bourne.main:app --host 0.0.0.0
+      "
     environment:
       - SCYLLA_HOST=scylla
       - KAFKA_BROKERS=kafka:9092
     ports:
       - "8000:8000"
-    depends_on:
-      scylla:
-          condition: service_healthy
-      kafka:
-          condition: service_started
 
   scylla:
     image: scylladb/scylla:5.4.0
